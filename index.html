@@ -1,17 +1,1464 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vantage Software</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Vantage Software — thoughtful mobile apps and games for iOS, including SUDOKYU, AquaFlow, and Done.">
+  <title>Vantage Software</title>
+  <link rel="icon" href="assets/favicon.png" type="image/png">
+  <link rel="preload" href="assets/logo-hero.png" as="image">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #06070b;
+      --text: #f8f9fc;
+      --muted: #8b95ad;
+      --sudokyu: #a855f7;
+      --sudokyu-glow: rgba(168, 85, 247, 0.45);
+      --aquaflow: #22d3ee;
+      --aquaflow-glow: rgba(34, 211, 238, 0.4);
+      --done: #fbbf24;
+      --done-glow: rgba(251, 191, 36, 0.38);
+      --accent-mix: #818cf8;
+      --radius: 24px;
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: "Outfit", -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    img { display: block; max-width: 100%; }
+
+    /* Custom cursor */
+    @media (pointer: fine) {
+      body { cursor: none; }
+      a, button, .btn { cursor: none; }
+    }
+
+    .cursor-dot,
+    .cursor-ring {
+      position: fixed;
+      top: 0; left: 0;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .cursor-dot {
+      width: 6px; height: 6px;
+      background: #fff;
+      mix-blend-mode: difference;
+    }
+
+    .cursor-ring {
+      width: 36px; height: 36px;
+      border: 1.5px solid rgba(255, 255, 255, 0.45);
+      transition: width 0.25s var(--ease-out), height 0.25s var(--ease-out), border-color 0.25s ease, opacity 0.3s ease;
+    }
+
+    body.cursor-ready .cursor-dot,
+    body.cursor-ready .cursor-ring { opacity: 1; }
+
+    body.cursor-hover .cursor-ring {
+      width: 56px; height: 56px;
+      border-color: var(--aquaflow);
+    }
+
+    /* Particle canvas */
+    #particles {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Cursor spotlight */
+    .spotlight {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background: radial-gradient(600px circle at var(--mx, 50%) var(--my, 50%), rgba(129, 140, 248, 0.09), transparent 45%);
+      transition: opacity 0.4s ease;
+    }
+
+    /* Aurora orbs */
+    .aurora {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.55;
+      animation: drift var(--dur, 18s) ease-in-out infinite alternate;
+    }
+
+    .orb-1 {
+      width: 55vw; height: 55vw;
+      top: -15%; left: -10%;
+      background: radial-gradient(circle, var(--sudokyu-glow), transparent 70%);
+      --dur: 22s;
+    }
+
+    .orb-2 {
+      width: 45vw; height: 45vw;
+      top: 30%; right: -12%;
+      background: radial-gradient(circle, var(--aquaflow-glow), transparent 70%);
+      animation-delay: -6s;
+      --dur: 19s;
+    }
+
+    .orb-3 {
+      width: 40vw; height: 40vw;
+      bottom: -10%; left: 25%;
+      background: radial-gradient(circle, var(--done-glow), transparent 70%);
+      animation-delay: -11s;
+      --dur: 24s;
+    }
+
+    @keyframes drift {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(6vw, -4vh) scale(1.12); }
+    }
+
+    /* Grain */
+    .grain {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.045;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .page { position: relative; z-index: 2; }
+
+    .container {
+      width: min(100% - 48px, 1180px);
+      margin: 0 auto;
+    }
+
+    /* Nav */
+    nav {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 200;
+      width: min(calc(100% - 32px), 900px);
+      padding: 12px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(8, 9, 14, 0.55);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.35);
+      transition: transform 0.5s var(--ease-out), opacity 0.5s ease;
+    }
+
+    nav.hidden-nav {
+      transform: translateX(-50%) translateY(-120%);
+      opacity: 0;
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+    }
+
+    .nav-brand img {
+      height: 30px;
+      width: auto;
+      object-fit: contain;
+      filter: drop-shadow(0 0 12px rgba(168, 85, 247, 0.2));
+      transition: filter 0.3s ease, transform 0.3s var(--ease-out);
+    }
+
+    .nav-brand:hover img {
+      filter: drop-shadow(0 0 20px rgba(34, 211, 238, 0.35));
+      transform: scale(1.03);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      list-style: none;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .nav-links a {
+      position: relative;
+      transition: color 0.25s ease;
+    }
+
+    .nav-links a::after {
+      content: "";
+      position: absolute;
+      left: 0; bottom: -4px;
+      width: 100%; height: 2px;
+      background: linear-gradient(90deg, var(--sudokyu), var(--aquaflow), var(--done));
+      transform: scaleX(0);
+      transform-origin: right;
+      transition: transform 0.35s var(--ease-out);
+      border-radius: 2px;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a:hover::after { transform: scaleX(1); transform-origin: left; }
+
+    .nav-cta {
+      padding: 9px 16px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--sudokyu), var(--aquaflow));
+      color: #fff;
+      transition: transform 0.25s var(--ease-out), box-shadow 0.25s ease;
+    }
+
+    .nav-cta:hover {
+      transform: scale(1.04);
+      box-shadow: 0 8px 28px rgba(34, 211, 238, 0.3);
+    }
+
+    /* Marquee */
+    .marquee-wrap {
+      position: relative;
+      overflow: hidden;
+      padding: 14px 0;
+      border-block: 1px solid rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.02);
+      mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    }
+
+    .marquee {
+      display: flex;
+      width: max-content;
+      animation: marquee 28s linear infinite;
+      gap: 48px;
+    }
+
+    .marquee span {
+      font-family: "Syne", sans-serif;
+      font-size: 0.95rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      color: rgba(255, 255, 255, 0.35);
+    }
+
+    .marquee .dot {
+      color: var(--aquaflow);
+      animation: blink 2s ease-in-out infinite;
+    }
+
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Hero */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 120px 0 80px;
+      position: relative;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: center;
+    }
+
+    .hero-visual {
+      position: relative;
+      display: grid;
+      place-items: center;
+      min-height: 380px;
+    }
+
+    .hero-logo-scene {
+      perspective: 1200px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .orbit-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      animation: spin var(--speed, 20s) linear infinite;
+    }
+
+    .orbit-ring-1 { width: 420px; height: 420px; --speed: 24s; }
+    .orbit-ring-2 { width: 350px; height: 350px; --speed: 18s; animation-direction: reverse; border-color: rgba(168, 85, 247, 0.2); }
+    .orbit-ring-3 { width: 280px; height: 280px; --speed: 14s; border-color: rgba(34, 211, 238, 0.2); }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .orbit-dot {
+      position: absolute;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      top: -5px; left: 50%;
+      margin-left: -5px;
+    }
+
+    .orbit-ring-1 .orbit-dot { background: var(--sudokyu); box-shadow: 0 0 16px var(--sudokyu); }
+    .orbit-ring-2 .orbit-dot { background: var(--aquaflow); box-shadow: 0 0 16px var(--aquaflow); }
+    .orbit-ring-3 .orbit-dot { background: var(--done); box-shadow: 0 0 16px var(--done); }
+
+    .hero-logo-wrap {
+      position: relative;
+      transform-style: preserve-3d;
+      will-change: transform;
+      transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+      animation: float 6s ease-in-out infinite;
+      transition: transform 0.35s var(--ease-out);
+    }
+
+    @keyframes float {
+      0%, 100% { translate: 0 0; }
+      50% { translate: 0 -14px; }
+    }
+
+    .logo-glow {
+      position: absolute;
+      inset: -20px -30px;
+      border-radius: 32px;
+      background: conic-gradient(from var(--glow-angle, 0deg), var(--sudokyu), var(--aquaflow), var(--done), var(--sudokyu));
+      opacity: 0.35;
+      filter: blur(28px);
+      z-index: -1;
+      animation: glow-spin 10s linear infinite;
+    }
+
+    @keyframes glow-spin {
+      to { --glow-angle: 360deg; }
+    }
+
+    @property --glow-angle {
+      syntax: "<angle>";
+      initial-value: 0deg;
+      inherits: false;
+    }
+
+    .hero-logo {
+      width: min(520px, 92vw);
+      height: auto;
+      border-radius: 0;
+      filter: drop-shadow(0 24px 60px rgba(0, 0, 0, 0.55));
+      animation: logo-enter 1.2s var(--ease-out) both;
+    }
+
+    @keyframes logo-enter {
+      from {
+        opacity: 0;
+        transform: scale(0.88) translateZ(-40px);
+        filter: blur(8px) drop-shadow(0 24px 60px rgba(0, 0, 0, 0.55));
+      }
+      to {
+        opacity: 1;
+        transform: scale(1) translateZ(0);
+        filter: blur(0) drop-shadow(0 24px 60px rgba(0, 0, 0, 0.55));
+      }
+    }
+
+    .hero-copy { position: relative; }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.04);
+      font-size: 0.78rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .live-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 12px #4ade80;
+      animation: pulse-dot 2s ease infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.7; }
+    }
+
+    .hero h1 {
+      font-family: "Syne", sans-serif;
+      font-size: clamp(2.8rem, 6vw, 4.8rem);
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      margin-bottom: 24px;
+    }
+
+    .gradient-text {
+      background: linear-gradient(120deg, #fff 0%, var(--aquaflow) 35%, var(--sudokyu) 65%, var(--done) 100%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: shimmer 8s linear infinite;
+    }
+
+    @keyframes shimmer {
+      to { background-position: 200% center; }
+    }
+
+    .hero-desc {
+      color: var(--muted);
+      font-size: 1.12rem;
+      max-width: 480px;
+      margin-bottom: 32px;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 15px 26px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: transform 0.3s var(--ease-out), box-shadow 0.3s ease;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+    }
+
+    .btn-magnetic { position: relative; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--sudokyu) 0%, #6366f1 50%, var(--aquaflow) 100%);
+      background-size: 200% 200%;
+      color: #fff;
+      animation: btn-gradient 6s ease infinite;
+      box-shadow: 0 12px 40px rgba(99, 102, 241, 0.35);
+    }
+
+    @keyframes btn-gradient {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 18px 50px rgba(34, 211, 238, 0.35);
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text);
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      animation: bob 2.5s ease-in-out infinite;
+    }
+
+    .scroll-line {
+      width: 1px;
+      height: 48px;
+      background: linear-gradient(180deg, var(--aquaflow), transparent);
+    }
+
+    @keyframes bob {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(8px); }
+    }
+
+    /* Reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.9s var(--ease-out), transform 0.9s var(--ease-out);
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Stats strip */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin: 0 0 100px;
+    }
+
+    .stat-card {
+      padding: 28px;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(12px);
+      transition: transform 0.4s var(--ease-out), border-color 0.4s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+
+    .stat-card:nth-child(1):hover { box-shadow: 0 20px 50px rgba(168, 85, 247, 0.12); }
+    .stat-card:nth-child(2):hover { box-shadow: 0 20px 50px rgba(34, 211, 238, 0.12); }
+    .stat-card:nth-child(3):hover { box-shadow: 0 20px 50px rgba(251, 191, 36, 0.12); }
+
+    .stat-num {
+      font-family: "Syne", sans-serif;
+      font-size: 2.4rem;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .stat-card:nth-child(1) .stat-num { color: var(--sudokyu); }
+    .stat-card:nth-child(2) .stat-num { color: var(--aquaflow); }
+    .stat-card:nth-child(3) .stat-num { color: var(--done); }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    /* Section headers */
+    section { padding: 100px 0; }
+
+    .section-tag {
+      display: inline-block;
+      margin-bottom: 14px;
+      font-size: 0.75rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .section-title {
+      font-family: "Syne", sans-serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .section-desc {
+      color: var(--muted);
+      font-size: 1.08rem;
+      max-width: 560px;
+    }
+
+    /* Product showcase — horizontal scroll cards */
+    .products-header {
+      margin-bottom: 48px;
+    }
+
+    .product-track {
+      display: flex;
+      gap: 28px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding: 20px 4px 40px;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .product-track::-webkit-scrollbar { display: none; }
+
+    .product-card {
+      flex: 0 0 min(380px, 88vw);
+      scroll-snap-align: center;
+      position: relative;
+      padding: 36px;
+      border-radius: 32px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+      min-height: 480px;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.15s ease-out, box-shadow 0.5s ease;
+      transform-style: preserve-3d;
+      will-change: transform;
+    }
+
+    .product-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0.15;
+      transition: opacity 0.5s ease;
+    }
+
+    .product-card:hover {
+      transform: translateY(-10px) scale(1.01);
+    }
+
+    .product-card:hover::before { opacity: 0.28; }
+
+    .product-card--sudokyu {
+      background: linear-gradient(160deg, #1a0f2e 0%, #0d0d14 60%);
+      box-shadow: 0 24px 60px rgba(168, 85, 247, 0.15);
+    }
+    .product-card--sudokyu::before {
+      background: radial-gradient(circle at 80% 20%, var(--sudokyu-glow), transparent 55%);
+    }
+    .product-card--sudokyu:hover { box-shadow: 0 32px 80px rgba(168, 85, 247, 0.28); }
+
+    .product-card--aquaflow {
+      background: linear-gradient(160deg, #0a1f2e 0%, #0d0d14 60%);
+      box-shadow: 0 24px 60px rgba(34, 211, 238, 0.12);
+    }
+    .product-card--aquaflow::before {
+      background: radial-gradient(circle at 20% 80%, var(--aquaflow-glow), transparent 55%);
+    }
+    .product-card--aquaflow:hover { box-shadow: 0 32px 80px rgba(34, 211, 238, 0.25); }
+
+    .product-card--done {
+      background: linear-gradient(160deg, #1f1808 0%, #0d0d14 60%);
+      box-shadow: 0 24px 60px rgba(251, 191, 36, 0.1);
+    }
+    .product-card--done::before {
+      background: radial-gradient(circle at 70% 60%, var(--done-glow), transparent 55%);
+    }
+    .product-card--done:hover { box-shadow: 0 32px 80px rgba(251, 191, 36, 0.22); }
+
+    .product-bg-pattern {
+      position: absolute;
+      inset: 0;
+      opacity: 0.06;
+      pointer-events: none;
+    }
+
+    .sudoku-grid {
+      display: grid;
+      grid-template-columns: repeat(9, 1fr);
+      gap: 2px;
+      padding: 24px;
+      font-size: 0.55rem;
+      font-weight: 700;
+      color: var(--sudokyu);
+    }
+
+    .water-drops {
+      position: absolute;
+      inset: 0;
+    }
+
+    .drop {
+      position: absolute;
+      width: 6px; height: 10px;
+      background: var(--aquaflow);
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      opacity: 0.4;
+      animation: fall var(--fall-dur, 4s) linear infinite;
+      animation-delay: var(--fall-delay, 0s);
+    }
+
+    @keyframes fall {
+      0% { transform: translateY(-20px); opacity: 0; }
+      10% { opacity: 0.5; }
+      90% { opacity: 0.3; }
+      100% { transform: translateY(500px); opacity: 0; }
+    }
+
+    .sparkles span {
+      position: absolute;
+      width: 4px; height: 4px;
+      background: var(--done);
+      border-radius: 50%;
+      animation: twinkle 3s ease-in-out infinite;
+      animation-delay: var(--tw-delay, 0s);
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.8); }
+    }
+
+    .product-content { position: relative; z-index: 2; flex: 1; display: flex; flex-direction: column; }
+
+    .product-badge {
+      display: inline-flex;
+      align-self: flex-start;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .product-card--sudokyu .product-badge { color: var(--sudokyu); background: rgba(168, 85, 247, 0.12); }
+    .product-card--aquaflow .product-badge { color: var(--aquaflow); background: rgba(34, 211, 238, 0.1); }
+    .product-card--done .product-badge { color: var(--done); background: rgba(251, 191, 36, 0.1); }
+
+    .product-name {
+      font-family: "Syne", sans-serif;
+      font-size: 2.6rem;
+      line-height: 1;
+      margin-bottom: 16px;
+      letter-spacing: -0.02em;
+    }
+
+    .product-desc {
+      color: var(--muted);
+      font-size: 1rem;
+      flex: 1;
+      margin-bottom: 28px;
+    }
+
+    .product-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .product-link {
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 0.84rem;
+      font-weight: 500;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(0, 0, 0, 0.25);
+      transition: background 0.25s ease, transform 0.25s var(--ease-out);
+    }
+
+    .product-link:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .track-hint {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-top: -12px;
+    }
+
+    /* About bento */
+    .bento {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 20px;
+    }
+
+    .bento-card {
+      padding: 32px;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.4s var(--ease-out);
+    }
+
+    .bento-card:hover { transform: scale(1.01); }
+
+    .bento-main {
+      grid-row: span 2;
+      background:
+        linear-gradient(135deg, rgba(168, 85, 247, 0.08), rgba(34, 211, 238, 0.06)),
+        rgba(255, 255, 255, 0.02);
+    }
+
+    .bento-main h3 {
+      font-family: "Syne", sans-serif;
+      font-size: 1.8rem;
+      margin-bottom: 16px;
+    }
+
+    .bento-main p { color: var(--muted); font-size: 1.02rem; }
+
+    .bento-icon {
+      font-size: 2rem;
+      margin-bottom: 14px;
+    }
+
+    .bento-card h4 {
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+
+    .bento-card p {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    /* Contact */
+    .contact-box {
+      position: relative;
+      padding: 56px;
+      border-radius: 36px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background:
+        linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(34, 211, 238, 0.08)),
+        rgba(255, 255, 255, 0.03);
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: center;
+    }
+
+    .contact-box::after {
+      content: "";
+      position: absolute;
+      width: 300px; height: 300px;
+      right: -80px; top: -80px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--sudokyu-glow), transparent 70%);
+      animation: pulse-glow 5s ease-in-out infinite;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.2); opacity: 1; }
+    }
+
+    .contact-box > * { position: relative; z-index: 1; }
+
+    .contact-box h3 {
+      font-family: "Syne", sans-serif;
+      font-size: 2.2rem;
+      margin-bottom: 14px;
+    }
+
+    .contact-box p { color: var(--muted); font-size: 1.05rem; }
+
+    .contact-methods {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .contact-item {
+      padding: 20px 24px;
+      border-radius: 18px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transition: border-color 0.3s ease, transform 0.3s var(--ease-out);
+    }
+
+    .contact-item:hover {
+      border-color: rgba(34, 211, 238, 0.4);
+      transform: translateX(6px);
+    }
+
+    .contact-item span {
+      display: block;
+      font-size: 0.72rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .contact-item a {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .contact-item a:hover {
+      background: linear-gradient(90deg, var(--aquaflow), var(--sudokyu));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    /* Footer */
+    footer {
+      padding: 48px 0 60px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .footer-inner {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .footer-brand img {
+      height: 28px;
+      width: auto;
+      object-fit: contain;
+      opacity: 0.85;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-links a:hover { color: var(--text); }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+      .reveal { opacity: 1; transform: none; }
+    }
+
+    @media (max-width: 900px) {
+      .hero-grid { grid-template-columns: 1fr; text-align: center; }
+      .hero-visual { order: -1; min-height: 320px; }
+      .hero-desc { margin-inline: auto; }
+      .hero-actions { justify-content: center; }
+      .stats { grid-template-columns: 1fr; }
+      .bento { grid-template-columns: 1fr; }
+      .bento-main { grid-row: auto; }
+      .contact-box { grid-template-columns: 1fr; padding: 36px; }
+      .nav-links { display: none; }
+    }
+
+    @media (max-width: 640px) {
+      nav { top: 12px; }
+      .orbit-ring-1 { width: 300px; height: 300px; }
+      .orbit-ring-2 { width: 240px; height: 240px; }
+      .orbit-ring-3 { width: 180px; height: 180px; }
+      .nav-brand img { height: 24px; }
+    }
+  </style>
 </head>
-<body style="font-family: Arial; text-align:center; margin-top:80px;">
-    <h1>Welcome to Vantage Software</h1>
+<body>
+  <canvas id="particles" aria-hidden="true"></canvas>
+  <div class="cursor-dot" aria-hidden="true"></div>
+  <div class="cursor-ring" aria-hidden="true"></div>
 
-    <p>Developer of mobile apps and games.</p>
+  <div class="aurora" aria-hidden="true">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+  <div class="spotlight" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
 
-    <p>
-        🎮 Sudokyu
-    </p>
+  <div class="page">
+    <nav id="nav">
+      <div class="nav-inner">
+        <a class="nav-brand" href="#top">
+          <img src="assets/logo-nav.png" alt="Vantage Software" height="30">
+        </a>
+        <ul class="nav-links">
+          <li><a href="#about">About</a></li>
+          <li><a href="#products">Products</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+        <a class="nav-cta" href="mailto:vantage.software@icloud.com">Say hello</a>
+      </div>
+    </nav>
+
+    <div class="marquee-wrap" aria-hidden="true">
+      <div class="marquee">
+        <span>SUDOKYU <span class="dot">◆</span> AquaFlow <span class="dot">◆</span> Done. <span class="dot">◆</span> iOS <span class="dot">◆</span> SwiftUI <span class="dot">◆</span> Vantage Software <span class="dot">◆</span></span>
+        <span>SUDOKYU <span class="dot">◆</span> AquaFlow <span class="dot">◆</span> Done. <span class="dot">◆</span> iOS <span class="dot">◆</span> SwiftUI <span class="dot">◆</span> Vantage Software <span class="dot">◆</span></span>
+      </div>
+    </div>
+
+    <header class="hero" id="top">
+      <div class="container hero-grid">
+        <div class="hero-copy reveal">
+          <p class="hero-eyebrow"><span class="live-dot"></span> Independent iOS studio</p>
+          <h1>We build apps<br>people <span class="gradient-text">actually use.</span></h1>
+          <p class="hero-desc">
+            Vantage Software crafts focused mobile experiences — puzzle games, wellness tools,
+            and habit companions — with premium design and privacy at the core.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn-primary btn-magnetic" href="#products">See our work ↓</a>
+            <a class="btn btn-ghost btn-magnetic" href="#contact">Get in touch</a>
+          </div>
+        </div>
+
+        <div class="hero-visual reveal">
+          <div class="orbit-ring orbit-ring-1"><span class="orbit-dot"></span></div>
+          <div class="orbit-ring orbit-ring-2"><span class="orbit-dot"></span></div>
+          <div class="orbit-ring orbit-ring-3"><span class="orbit-dot"></span></div>
+          <div class="hero-logo-scene" id="logo-scene">
+            <div class="hero-logo-wrap" id="logo-tilt">
+              <div class="logo-glow" aria-hidden="true"></div>
+              <img class="hero-logo" src="assets/logo-hero.png" alt="Vantage Software — mobile apps and games" width="520" height="284">
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="scroll-hint" aria-hidden="true">
+        <span>Scroll</span>
+        <div class="scroll-line"></div>
+      </div>
+    </header>
+
+    <div class="container">
+      <div class="stats reveal">
+        <article class="stat-card">
+          <p class="stat-num" data-count="3">0</p>
+          <p class="stat-label">Apps on the journey to your pocket</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-num" data-count="100">0</p>
+          <p class="stat-label">% SwiftUI — native, fast, beautiful</p>
+        </article>
+        <article class="stat-card">
+          <p class="stat-num" data-suffix="+">∞</p>
+          <p class="stat-label">Care poured into every pixel</p>
+        </article>
+      </div>
+    </div>
+
+    <section id="products">
+      <div class="container">
+        <div class="products-header reveal">
+          <p class="section-tag" style="color: var(--aquaflow);">Our universe</p>
+          <h2 class="section-title">Three apps.<br>Three worlds.</h2>
+          <p class="section-desc">Swipe through — each product has its own color, character, and purpose.</p>
+        </div>
+
+        <div class="product-track" id="product-track">
+          <article class="product-card product-card--sudokyu reveal">
+            <div class="product-bg-pattern sudoku-grid" aria-hidden="true">
+              <span>5</span><span></span><span>3</span><span></span><span>7</span><span></span><span></span><span></span><span></span>
+              <span>6</span><span></span><span></span><span>1</span><span>9</span><span>5</span><span></span><span></span><span></span>
+              <span></span><span>9</span><span>8</span><span></span><span></span><span></span><span></span><span>6</span><span></span>
+              <span>8</span><span></span><span></span><span></span><span>6</span><span></span><span></span><span></span><span>3</span>
+              <span>4</span><span></span><span></span><span>8</span><span></span><span>3</span><span></span><span></span><span>1</span>
+              <span>7</span><span></span><span></span><span></span><span>2</span><span></span><span></span><span></span><span>6</span>
+              <span></span><span>6</span><span></span><span></span><span></span><span></span><span>2</span><span>8</span><span></span>
+              <span></span><span></span><span></span><span>4</span><span>1</span><span>9</span><span></span><span></span><span>5</span>
+              <span></span><span></span><span></span><span></span><span>8</span><span></span><span></span><span>7</span><span>9</span>
+            </div>
+            <div class="product-content">
+              <span class="product-badge">Puzzle game</span>
+              <h3 class="product-name">SUDOKYU</h3>
+              <p class="product-desc">
+                A modern Sudoku experience with a sleek dark interface, daily challenges,
+                level progression, hints, streaks, and seasonal flair. Logic meets style.
+              </p>
+              <div class="product-links">
+                <a class="product-link" href="https://github.com/VantageSoftware/Sudokyu-privacy-policy">Privacy</a>
+                <a class="product-link" href="https://github.com/VantageSoftware/Sudokyu-terms-of-use">Terms</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="product-card product-card--aquaflow reveal">
+            <div class="water-drops" aria-hidden="true" id="drops"></div>
+            <div class="product-content">
+              <span class="product-badge">Hydration</span>
+              <h3 class="product-name">AquaFlow</h3>
+              <p class="product-desc">
+                Track your daily water intake with quick logging, smart reminders, home-screen widgets,
+                and Apple Health integration. Hydration made visual and effortless.
+              </p>
+              <div class="product-links">
+                <a class="product-link" href="https://github.com/VantageSoftware/AquaFlow-privacy-policy">Privacy</a>
+                <a class="product-link" href="https://github.com/VantageSoftware/AquaFlow-terms-of-use">Terms</a>
+              </div>
+            </div>
+          </article>
+
+          <article class="product-card product-card--done reveal">
+            <div class="sparkles" aria-hidden="true" id="sparkles"></div>
+            <div class="product-content">
+              <span class="product-badge">Habit companion</span>
+              <h3 class="product-name">Done.</h3>
+              <p class="product-desc">
+                A calm app for breaking habits and building freedom. Freedom counter, journaling,
+                SOS craving tools, mood tracking, and milestones — your journey, supported.
+              </p>
+              <div class="product-links">
+                <a class="product-link" href="https://github.com/VantageSoftware/Done.-privacy-policies">Privacy</a>
+                <a class="product-link" href="https://github.com/VantageSoftware/Done.-term-of-use">Terms</a>
+              </div>
+            </div>
+          </article>
+        </div>
+        <p class="track-hint reveal">← Swipe or scroll to explore →</p>
+      </div>
+    </section>
+
+    <section id="about">
+      <div class="container">
+        <div class="reveal" style="margin-bottom: 40px;">
+          <p class="section-tag" style="color: var(--sudokyu);">Who we are</p>
+          <h2 class="section-title">Small studio.<br>Big standards.</h2>
+        </div>
+        <div class="bento reveal">
+          <article class="bento-card bento-main">
+            <h3>Built different.</h3>
+            <p>
+              Vantage Software is an independent studio making polished iOS products.
+              We believe great apps don't need to be complicated — they need to be intentional.
+              Every screen is designed with care, every feature earns its place,
+              and your privacy is never an afterthought.
+            </p>
+          </article>
+          <article class="bento-card">
+            <div class="bento-icon">📱</div>
+            <h4>Native SwiftUI</h4>
+            <p>Silky animations, platform-native feel, tuned for iPhone and iPad.</p>
+          </article>
+          <article class="bento-card">
+            <div class="bento-icon">🔒</div>
+            <h4>Privacy-first</h4>
+            <p>On-device storage, transparent policies, minimal data collection.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="contact">
+      <div class="container">
+        <div class="contact-box reveal">
+          <div>
+            <h3>Let's build something together.</h3>
+            <p>Support, partnerships, press, or just saying hi — we'd love to hear from you.</p>
+          </div>
+          <div class="contact-methods">
+            <div class="contact-item">
+              <span>Email</span>
+              <a href="mailto:vantage.software@icloud.com">vantage.software@icloud.com</a>
+            </div>
+            <div class="contact-item">
+              <span>GitHub</span>
+              <a href="https://github.com/VantageSoftware" target="_blank" rel="noopener noreferrer">github.com/VantageSoftware</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <img src="assets/logo-nav.png" alt="Vantage Software" height="28">
+          <span>&copy; 2026 Vantage Software</span>
+        </div>
+        <div class="footer-links">
+          <a href="#products">Products</a>
+          <a href="#about">About</a>
+          <a href="mailto:vantage.software@icloud.com">Support</a>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const finePointer = window.matchMedia("(pointer: fine)").matches;
+
+    // Mouse spotlight
+    const spotlight = document.querySelector(".spotlight");
+    document.addEventListener("mousemove", (e) => {
+      spotlight.style.setProperty("--mx", e.clientX + "px");
+      spotlight.style.setProperty("--my", e.clientY + "px");
+    });
+
+    // Custom cursor
+    if (finePointer && !reducedMotion) {
+      const cursorDot = document.querySelector(".cursor-dot");
+      const cursorRing = document.querySelector(".cursor-ring");
+      let ringX = 0;
+      let ringY = 0;
+      let mouseX = 0;
+      let mouseY = 0;
+
+      document.body.classList.add("cursor-ready");
+
+      document.addEventListener("mousemove", (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        cursorDot.style.left = mouseX + "px";
+        cursorDot.style.top = mouseY + "px";
+      });
+
+      const animateCursor = () => {
+        ringX += (mouseX - ringX) * 0.15;
+        ringY += (mouseY - ringY) * 0.15;
+        cursorRing.style.left = ringX + "px";
+        cursorRing.style.top = ringY + "px";
+        requestAnimationFrame(animateCursor);
+      };
+      animateCursor();
+
+      document.querySelectorAll("a, button, .btn, .product-card, .contact-item").forEach((el) => {
+        el.addEventListener("mouseenter", () => document.body.classList.add("cursor-hover"));
+        el.addEventListener("mouseleave", () => document.body.classList.remove("cursor-hover"));
+      });
+    }
+
+    // Floating particle field
+    const canvas = document.getElementById("particles");
+    if (canvas && !reducedMotion) {
+      const ctx = canvas.getContext("2d");
+      let particles = [];
+      let w = 0;
+      let h = 0;
+
+      const resize = () => {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+        const count = Math.min(80, Math.floor((w * h) / 18000));
+        particles = Array.from({ length: count }, () => ({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: (Math.random() - 0.5) * 0.35,
+          r: Math.random() * 1.6 + 0.4,
+          color: ["#a855f7", "#22d3ee", "#fbbf24", "#ffffff"][Math.floor(Math.random() * 4)],
+          alpha: Math.random() * 0.45 + 0.1,
+        }));
+      };
+
+      resize();
+      window.addEventListener("resize", resize);
+
+      const draw = () => {
+        ctx.clearRect(0, 0, w, h);
+        particles.forEach((p, i) => {
+          p.x += p.vx;
+          p.y += p.vy;
+          if (p.x < 0) p.x = w;
+          if (p.x > w) p.x = 0;
+          if (p.y < 0) p.y = h;
+          if (p.y > h) p.y = 0;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.globalAlpha = p.alpha;
+          ctx.fill();
+
+          for (let j = i + 1; j < particles.length; j++) {
+            const q = particles[j];
+            const dx = p.x - q.x;
+            const dy = p.y - q.y;
+            const dist = Math.hypot(dx, dy);
+            if (dist < 120) {
+              ctx.beginPath();
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(q.x, q.y);
+              ctx.strokeStyle = p.color;
+              ctx.globalAlpha = (1 - dist / 120) * 0.12;
+              ctx.stroke();
+            }
+          }
+        });
+        ctx.globalAlpha = 1;
+        requestAnimationFrame(draw);
+      };
+      draw();
+    }
+
+    // Nav hide on scroll down
+    let lastY = 0;
+    const nav = document.getElementById("nav");
+    window.addEventListener("scroll", () => {
+      const y = window.scrollY;
+      nav.classList.toggle("hidden-nav", y > lastY && y > 120);
+      lastY = y;
+    }, { passive: true });
+
+    // Scroll reveal
+    const revealEls = document.querySelectorAll(".reveal");
+    const revealObs = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("visible");
+          revealObs.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: "0px 0px -40px 0px" });
+    revealEls.forEach((el) => revealObs.observe(el));
+
+    // Counter animation
+    const counters = document.querySelectorAll("[data-count]");
+    const countObs = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const el = entry.target;
+        const target = parseInt(el.dataset.count, 10);
+        const suffix = el.dataset.suffix || "";
+        let current = 0;
+        const step = Math.ceil(target / 40);
+        const tick = () => {
+          current = Math.min(current + step, target);
+          el.textContent = current + suffix;
+          if (current < target) requestAnimationFrame(tick);
+        };
+        tick();
+        countObs.unobserve(el);
+      });
+    }, { threshold: 0.5 });
+    counters.forEach((el) => countObs.observe(el));
+
+    // Magnetic buttons
+    document.querySelectorAll(".btn-magnetic").forEach((btn) => {
+      btn.addEventListener("mousemove", (e) => {
+        const rect = btn.getBoundingClientRect();
+        const x = e.clientX - rect.left - rect.width / 2;
+        const y = e.clientY - rect.top - rect.height / 2;
+        btn.style.transform = `translate(${x * 0.15}px, ${y * 0.15}px)`;
+      });
+      btn.addEventListener("mouseleave", () => {
+        btn.style.transform = "";
+      });
+    });
+
+    // 3D logo tilt
+    const logoTilt = document.getElementById("logo-tilt");
+    const logoScene = document.getElementById("logo-scene");
+    if (logoTilt && logoScene && finePointer && !reducedMotion) {
+      logoScene.addEventListener("mousemove", (e) => {
+        const rect = logoScene.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        const rotateY = x * 18;
+        const rotateX = -y * 14;
+        logoTilt.style.setProperty("--rx", rotateX + "deg");
+        logoTilt.style.setProperty("--ry", rotateY + "deg");
+      });
+      logoScene.addEventListener("mouseleave", () => {
+        logoTilt.style.setProperty("--rx", "0deg");
+        logoTilt.style.setProperty("--ry", "0deg");
+      });
+    }
+
+    // 3D product card tilt
+    if (finePointer && !reducedMotion) {
+      document.querySelectorAll(".product-card").forEach((card) => {
+        card.addEventListener("mousemove", (e) => {
+          const rect = card.getBoundingClientRect();
+          const x = (e.clientX - rect.left) / rect.width - 0.5;
+          const y = (e.clientY - rect.top) / rect.height - 0.5;
+          card.style.transform = `perspective(800px) rotateX(${-y * 8}deg) rotateY(${x * 8}deg) translateY(-10px) scale(1.01)`;
+        });
+        card.addEventListener("mouseleave", () => {
+          card.style.transform = "";
+        });
+      });
+    }
+
+    // Water drops for AquaFlow card
+    const dropsContainer = document.getElementById("drops");
+    if (dropsContainer) {
+      for (let i = 0; i < 18; i++) {
+        const drop = document.createElement("span");
+        drop.className = "drop";
+        drop.style.left = Math.random() * 100 + "%";
+        drop.style.setProperty("--fall-dur", 3 + Math.random() * 4 + "s");
+        drop.style.setProperty("--fall-delay", Math.random() * 5 + "s");
+        dropsContainer.appendChild(drop);
+      }
+    }
+
+    // Sparkles for Done card
+    const sparklesContainer = document.getElementById("sparkles");
+    if (sparklesContainer) {
+      for (let i = 0; i < 24; i++) {
+        const s = document.createElement("span");
+        s.style.left = Math.random() * 100 + "%";
+        s.style.top = Math.random() * 100 + "%";
+        s.style.setProperty("--tw-delay", Math.random() * 3 + "s");
+        sparklesContainer.appendChild(s);
+      }
+    }
+
+    // Auto-center first product card on load for mobile
+    const track = document.getElementById("product-track");
+    if (track && window.innerWidth < 900) {
+      requestAnimationFrame(() => {
+        const card = track.querySelector(".product-card");
+        if (card) {
+          track.scrollLeft = card.offsetWidth / 2;
+        }
+      });
+    }
+  </script>
 </body>
 </html>
